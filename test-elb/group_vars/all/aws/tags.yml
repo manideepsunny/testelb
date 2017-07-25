@@ -1,0 +1,8 @@
+#
+# Tags to apply to AWS components that have been provisioned/modified by this Playbook
+#
+
+env: DEV
+application: "{{ application_name }}"
+#ec2_group_inbound_sg: inbound
+#ec2_group_outbound_sg: outbound

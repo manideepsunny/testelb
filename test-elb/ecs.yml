@@ -1,0 +1,67 @@
+---
+- name: ECS | Provision all required infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    # Provision networking
+    - {
+        role: aws-vpc,
+        vpc_name: "{{ my_vpc_name }}",
+        vpc_region: "{{ my_vpc_region }}",
+        vpc_cidr_block: "{{ my_vpc_cidr_block }}",
+        vpc_subnets: "{{ my_vpc_subnets }}",
+        public_subnet_routes: "{{ my_public_subnet_routes }}"
+      }
+
+    # Provision security groups
+    - {
+        role: aws-security-groups,
+        vpc_region: "{{ my_vpc_region }}",
+        vpc_id: "{{ vpc.vpc_id }}",
+        ec2_group_inbound_sg: "{{ inbound_security_groups }}",
+        ec2_group_outbound_sg: "{{ outbound_security_groups }}"
+      }
+    # Provision an ELB
+    - {
+        role: aws-elb,
+        elb_name: "{{ my_elb_name }}",
+        vpc_name: "{{ my_vpc_name }}",
+        scheme: internal,
+        elb_security_groups: [
+          "{{ ec2_group_inbound_sg.results[0].group_id }}"
+          ],
+        elb_region: "{{ my_elb_region }}",
+        elb_subnets: [
+           "{{ vpc.subnets[0].id }}",
+           "{{ vpc.subnets[1].id }}"
+         ]
+      }
+
+
+    # Provision ECS with auto scaling EC2 instances
+    - {
+        role: aws-ecs-autoscale,
+        ecs_cluster_name: "{{ my_ecs_cluster_name }}",
+        ec2_security_groups: [
+          "{{ ec2_group_inbound_sg.results[0].group_id }}",
+          "{{ ec2_group_inbound_sg.results[1].group_id }}",
+          "{{ ec2_group_outbound_sg.results[0].group_id }}"
+          ],
+        ec2_asg_availability_zones: [
+          "{{ subnet_ecscluster_az_1 }}",
+          "{{ subnet_ecscluster_az_2 }}"
+          ],
+        ec2_asg_vpc_subnets: [
+          "{{ vpc.subnets[0].id }}",
+          "{{ vpc.subnets[1].id }}"
+          ],
+        ec2_asg_tags: "{{ ec2_tags }}",
+        vpc_name: "{{ my_vpc_name }}"
+      }
+
+
+
+
+
+
